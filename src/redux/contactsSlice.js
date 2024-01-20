@@ -1,11 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import Notiflix from 'notiflix';
-import {
-  addContact,
-  deleteContact,
-  fetchContacts,
-  toggleIsFavourite,
-} from './operation';
+import { fetchContacts, addContact, deleteContact } from './operations';
 
 const handlePending = state => {
   state.isLoading = true;
@@ -16,84 +10,49 @@ const handleRejected = (state, action) => {
   state.error = action.payload;
 };
 
-export const contactsSlice = createSlice({
+// The two functions beneath are for builder callback:
+const isPendingAction = action => {
+  return action.type.endsWith('/pending');
+};
+
+const isRejectAction = action => {
+  return action.type.endsWith('/rejected');
+};
+
+const contactsSlice = createSlice({
   name: 'contacts',
   initialState: {
-    contacts: [],
-    error: null,
+    items: [],
     isLoading: false,
-    sortedAlphabetic: true,
-    recentlyAdded: true,
-    favIsShown: false,
+    error: null,
   },
-  reducers: {
-    sortByName(state) {
-      state.contacts = state.contacts.sort((firstContact, secondContact) =>
-        state.sortedAlphabetic
-          ? firstContact.name.localeCompare(secondContact.name)
-          : secondContact.name.localeCompare(firstContact.name)
-      );
-      state.sortedAlphabetic = !state.sortedAlphabetic;
-    },
-    sortByAdded(state) {
-      state.contacts = state.contacts.sort((firstContact, secondContact) =>
-        state.recentlyAdded
-          ? secondContact.id - firstContact.id
-          : firstContact.id - secondContact.id
-      );
-      state.recentlyAdded = !state.recentlyAdded;
-    },
-    toggleShowFavourites(state) {
-      state.favIsShown = !state.favIsShown;
-    },
-  },
+  extraReducers: builder => {
+    builder
+      .addCase(fetchContacts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+        state.items = action.payload;
+      })
+      .addCase(addContact.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+        state.items.push(action.payload);
+      })
+      .addCase(deleteContact.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+        const index = state.items.findIndex(
+          contact => contact.id === action.payload.id
+        );
+        state.items.splice(index, 1);
+      })
 
-  extraReducers: {
-    [fetchContacts.pending]: handlePending,
-    [addContact.pending]: handlePending,
-    [deleteContact.pending]: handlePending,
-    [toggleIsFavourite]: handlePending,
-
-    [fetchContacts.rejected]: handleRejected,
-    [addContact.rejected]: handleRejected,
-    [deleteContact.rejected]: handleRejected,
-    [toggleIsFavourite]: handleRejected,
-
-    [fetchContacts.fulfilled](state, action) {
-      state.isLoading = false;
-      state.error = null;
-      state.contacts = action.payload;
-    },
-
-    [addContact.fulfilled](state, action) {
-      state.contacts.unshift(action.payload);
-      state.isLoading = false;
-      state.error = null;
-      Notiflix.Notify.success(
-        `${action.payload.name} has been successfully added to  your phonebook`
-      );
-    },
-
-    [deleteContact.fulfilled](state, action) {
-      state.isLoading = false;
-      state.error = null;
-      state.contacts = state.contacts.filter(
-        contact => contact.id !== action.payload.id
-      );
-    },
-    [toggleIsFavourite.fulfilled](state, action) {
-      state.isLoading = false;
-      state.error = null;
-      console.log(action.payload.id);
-      const index = state.contacts.findIndex(
-        contact => contact.id === action.payload.id
-      );
-
-      state.contacts[index] = action.payload;
-    },
+      .addMatcher(isPendingAction, handlePending)
+      .addMatcher(isRejectAction, handleRejected)
+      .addDefaultCase((state, action) => {
+        state.error = 'someone use old function, fix it!';
+      });
   },
 });
 
-export default contactsSlice.reducer;
-export const { sortByName, sortByAdded, toggleShowFavourites } =
-  contactsSlice.actions;
+export const contactsReducer = contactsSlice.reducer;

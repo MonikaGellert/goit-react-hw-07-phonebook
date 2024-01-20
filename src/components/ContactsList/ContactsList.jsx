@@ -1,54 +1,52 @@
-import { List, ListItem, DeleteBtn, BtnWrapper } from './ContactsList.styled';
-import { RiDeleteBin2Line } from 'react-icons/ri';
-import { PiHeartFill, PiHeartBold } from 'react-icons/pi';
-import { deleteContact, toggleIsFavourite } from 'redux/operation';
+import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { deleteContact } from '../../redux/operations';
 import {
-  selectVisibleContacts,
-  selectFavourites,
-  selectFavIsShown,
-} from 'redux/selectors';
-import SortedBtns from 'components/SortedBtns/SortedBtns';
+  selectFilteredContacts,
+  selectIsLoading,
+} from '../../redux/selectors.js';
+import PropTypes from 'prop-types';
+import styles from './ContactsList.module.css';
 
-const ContactList = () => {
-  let visibleContacts = useSelector(selectVisibleContacts);
-  const favContacts = useSelector(selectFavourites);
-  const favIsShown = useSelector(selectFavIsShown);
+const ContactsList = () => {
+  const items = useSelector(selectFilteredContacts);
+  const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
-  const contactsToShow = favIsShown ? favContacts : visibleContacts;
 
-	return (
-		<>
-			<SortedBtns/>
-    <List>
-      {contactsToShow.map(({ name, phone, id, isFavourite }) => {
-        return (
-          <ListItem key={id}>
-            {name}: {phone}
-            <BtnWrapper>
-              <DeleteBtn
-                type="button"
-                onClick={() => dispatch(toggleIsFavourite({ id, isFavourite }))}
-              >
-                {isFavourite ? (
-                  <PiHeartFill size="20" />
-                ) : (
-                  <PiHeartBold size="20" />
-                )}
-              </DeleteBtn>
-              <DeleteBtn
-                type="button"
-                onClick={() => dispatch(deleteContact(id))}
-              >
-                <RiDeleteBin2Line size="20" />
-              </DeleteBtn>
-            </BtnWrapper>
-          </ListItem>
-        );
-      })}
-    </List>
-	  </>
+  const handleDeleteContact = id => {
+    dispatch(deleteContact(id));
+  };
+
+  return (
+    <div className={styles.list}>
+      <h4>
+        You have {items.length} contact{items.length === 1 ? null : 's'}
+      </h4>
+      <ul className={styles.item}>
+        {!!isLoading && <b>Loading contacts...</b>}
+        {!!items &&
+          items.map(contact => (
+            <li key={contact.id}>
+              <div className={styles.contactLi}>
+                <span className={styles.contact}>{contact.name}:</span>
+                <span className={styles.contact}>{contact.phone}</span>
+                <button
+                  type="button"
+                  className={styles.button}
+                  onClick={() => handleDeleteContact(contact.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          ))}
+      </ul>
+    </div>
   );
 };
 
-export default ContactList;
+ContactsList.propTypes = {
+  contact: PropTypes.object,
+};
+
+export default ContactsList;
